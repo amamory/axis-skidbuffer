@@ -172,7 +172,7 @@ begin
           if reset_n = '0' then
             o_last_i <= '0';
           elsif o_last_i = '0' or m_ready_i = '1' then
-            o_last_i <= (s_valid_i = '1' or r_valid = '1') and (s_last_i = '1');
+            o_last_i <= (s_valid_i or r_valid ) and s_last_i;
           end if;
         end if;
       end process;

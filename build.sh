@@ -1,7 +1,7 @@
 # Set these variables accordingly before executing the script
 #export VIVADO=/opt/Xilinx/Vivado/2018.2/bin/vivado
 export VIVADO=/home/lsa/xilinx/2018.2/Vivado/2018.2/bin/vivado
-export VIVADO_DESIGN_NAME=ps_hermes
+export VIVADO_DESIGN_NAME=skid_ip
 export VIVADO_TOP_NAME=${VIVADO_DESIGN_NAME}_wrapper
 export XIL_APP_NAME=dma_test
 
