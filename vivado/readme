@@ -1,0 +1,9 @@
+
+This directory is a place holder for the Vivado projects. These projects are not supposed to 
+be under version control and will be discarded. Save anything relevant to the design. 
+It is useful to export the TCL of the design to get its configuration. This can be done in 
+Vivado's GUI via File -> Project -> Write TCL ...
+
+Dont place any other dir or file here. the .gitignore file deliberately ignores anything 
+inside this directory
+

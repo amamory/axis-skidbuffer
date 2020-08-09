@@ -1,0 +1,8 @@
+
+If this design has custom IPs, then this dir would have directories to each custom IPs 
+linked to the IPs source repository (i.e. it's a git submodule dir). 
+
+If this design is a custom IP, then this dir would have a directory with the IP's 
+component.xml file to recreate the IP's Vivado design for IP edition.  
+
+Dont place any other dir or file here.

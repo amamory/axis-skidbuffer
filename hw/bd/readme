@@ -1,0 +1,5 @@
+In case of a block based design, this dir would have a single tcl file to recreate the module. 
+For now, the scripts only support a single block and this block will be the top, except 
+for its wrapper which is automatically generated.
+
+If this design is not block based, then this dir should be left empty.

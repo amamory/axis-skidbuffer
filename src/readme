@@ -1,0 +1,5 @@
+
+If this design uses processors and runs software applications, these applications should be here.
+Create a subdir for each application. The name of the dir will be used to name the application.
+
+Dont place any other dir or file here.
