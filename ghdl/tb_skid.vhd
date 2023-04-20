@@ -35,8 +35,8 @@ use ieee.numeric_std.all;
 entity tb_skid is
   generic
   (
-    DW        : natural := 8;
-    OPT_INREG : boolean := True
+    DATA_WIDTH   : natural := 8;
+    OPT_DATA_REG : boolean := False
   );
 end tb_skid;
 
@@ -44,8 +44,8 @@ architecture bh of tb_skid is
   -- component declaration
   component skidbuffer is
   generic (
-    DW         : natural;
-    OPT_INREG : boolean);
+    DATA_WIDTH         : natural;
+    OPT_DATA_REG : boolean);
     port (
        clock     : in  std_logic;
        reset_n   : in  std_logic;
@@ -53,27 +53,27 @@ architecture bh of tb_skid is
        s_valid_i : in  std_logic;
        s_last_i  : in  std_logic;
        s_ready_o : out std_logic;
-       s_data_i  : in  std_logic_vector(DW - 1 downto 0);
+       s_data_i  : in  std_logic_vector(DATA_WIDTH - 1 downto 0);
 
        m_valid_o : out std_logic;
        m_last_o  : out std_logic;
        m_ready_i : in  std_logic;
-       m_data_o  : out std_logic_vector(DW - 1 downto 0));
+       m_data_o  : out std_logic_vector(DATA_WIDTH - 1 downto 0));
   end component;
   
   constant CLK_PERIOD: TIME := 5 ns;
 
   signal sim_valid_data  : std_logic := '0';
   signal sim_ready_data  : std_logic := '1';
-  signal sim_data        : std_logic_vector(DW-1 downto 0);
+  signal sim_data        : std_logic_vector(DATA_WIDTH-1 downto 0);
 
   signal s_axis_tvalid : std_logic := '0';
-  signal s_axis_tdata  : std_logic_vector(DW-1 downto 0);
+  signal s_axis_tdata  : std_logic_vector(DATA_WIDTH-1 downto 0);
   signal s_axis_tlast  : std_logic;
   signal s_axis_tready : std_logic;
 
   signal m_axis_tvalid : std_logic;
-  signal m_axis_tdata  : std_logic_vector(DW-1 downto 0);
+  signal m_axis_tdata  : std_logic_vector(DATA_WIDTH-1 downto 0);
   signal m_axis_tlast  : std_logic;
   signal m_axis_tready : std_logic := '0';
 
@@ -178,12 +178,18 @@ begin
       else
         if sim_valid_data = '1' then    -- VALID can be controlled
           if s_axis_tready = '1' then   -- READY can be controlled
-            if unsigned(s_axis_tdata) = 4 then
-              s_axis_tdata(DW-1 downto 1) <= (others => '0');
-              s_axis_tdata(0) <= '1';
-              sim_data(DW-1 downto 1) <= (others => '0');
-              sim_data(0) <= '1';
+            if unsigned(s_axis_tdata) = 3 then
               s_axis_tlast <= '1';
+            else 
+              s_axis_tlast <= '0';
+            end if;
+
+            if unsigned(s_axis_tdata) = 4 then
+              -- restart counter at "1"
+              s_axis_tdata(DATA_WIDTH-1 downto 1) <= (others => '0');
+              s_axis_tdata(0) <= '1';
+              sim_data(DATA_WIDTH-1 downto 1) <= (others => '0');
+              sim_data(0) <= '1';
             else
               if (unsigned(sim_data) > unsigned(s_axis_tdata)) and (unsigned(sim_data) < 4) then
                 s_axis_tdata <= std_logic_vector(unsigned(sim_data) + 1);
@@ -192,12 +198,11 @@ begin
               end if;
               
               if unsigned(sim_data) = 4 then
-                sim_data(DW-1 downto 1) <= (others => '0');
+                sim_data(DATA_WIDTH-1 downto 1) <= (others => '0');
                 sim_data(0) <= '1';
               else
                 sim_data <= std_logic_vector(unsigned(sim_data) + 1);
               end if;
-              s_axis_tlast <= '0';
             end if;
           else
             s_axis_tdata <= s_axis_tdata;
@@ -216,8 +221,8 @@ begin
 
   skidbuffer_inst : skidbuffer
   generic map (
-      DW         => DW,
-      OPT_INREG  => OPT_INREG
+      DATA_WIDTH    => DATA_WIDTH,
+      OPT_DATA_REG  => OPT_DATA_REG
   )
   port map (
     clock     => clk,
