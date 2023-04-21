@@ -1,0 +1,62 @@
+[*]
+[*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
+[*] Fri Apr 21 12:57:05 2023
+[*]
+[dumpfile] "C:\Users\simon\Downloads\P9\ghdl-axi-sim\axis-skidbuffer\ghdl\axi4-to-axis\wave.vcd"
+[dumpfile_mtime] "Fri Apr 21 12:53:49 2023"
+[dumpfile_size] 21480
+[savefile] "C:\Users\simon\Downloads\P9\ghdl-axi-sim\axis-skidbuffer\ghdl\axi4-to-axis\waveform.gtkw"
+[timestart] 0
+[size] 1920 1057
+[pos] -1 -1
+*-25.000000 72400000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] tb_axis.
+[sst_width] 224
+[signals_width] 174
+[sst_expanded] 1
+[sst_vpaned_height] 314
+@22
+[color] 5
+tb_axis.clk_count[7:0]
+@28
+[color] 3
+tb_axis.clk
+[color] 3
+tb_axis.rst_n
+tb_axis.axi_converter_inst.s_axi_awvalid
+tb_axis.axi_converter_inst.s_axi_awready
+@22
+tb_axis.axi_converter_inst.s_axi_awaddr[19:0]
+@28
+tb_axis.axi_converter_inst.s_axi_awburst[1:0]
+@22
+tb_axis.axi_converter_inst.s_axi_awlen[7:0]
+@28
+tb_axis.axi_converter_inst.s_axi_awsize[2:0]
+tb_axis.axi_converter_inst.s_axi_awid[2:0]
+[color] 2
+tb_axis.axi_converter_inst.s_axi_wvalid
+[color] 2
+tb_axis.axi_converter_inst.s_axi_wready
+@22
+[color] 2
+tb_axis.axi_converter_inst.s_axi_wdata[7:0]
+@28
+[color] 2
+tb_axis.axi_converter_inst.s_axi_wstrb[0]
+[color] 3
+tb_axis.axi_converter_inst.s_axi_bvalid
+[color] 3
+tb_axis.axi_converter_inst.s_axi_bready
+[color] 3
+tb_axis.axi_converter_inst.s_axi_bresp[1:0]
+[color] 3
+tb_axis.axi_converter_inst.s_axi_bid[2:0]
+tb_axis.axi_converter_inst.m_axis_tvalid
+tb_axis.axi_converter_inst.m_axis_tready
+@22
+tb_axis.axi_converter_inst.m_axis_tdata[7:0]
+@28
+tb_axis.axi_converter_inst.m_axis_tlast
+[pattern_trace] 1
+[pattern_trace] 0

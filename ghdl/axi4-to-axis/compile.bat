@@ -9,14 +9,16 @@ del /Q *.cf &
 
 :: analyze
 ghdl -a skidbuffer.vhd
-ghdl -a skidbuffer.vhd
-ghdl -a tb_skid.vhd
+ghdl -a axis_pipeline.vhd
+ghdl -a axi4_to_axis.vhd
+ghdl -a tb_axis.vhd
 :: elaborate
 ghdl -e skidbuffer
-ghdl -e skidbuffer
-ghdl -e tb_skid
+ghdl -e axis_pipeline
+ghdl -e axi4_to_axis
+ghdl -e tb_axis
 :: run
-ghdl -r tb_skid --vcd=wave.vcd --stop-time=1us
+ghdl -r tb_axis --vcd=wave.vcd --stop-time=1us
 gtkwave wave.vcd waveform.gtkw
 
 :: delete
