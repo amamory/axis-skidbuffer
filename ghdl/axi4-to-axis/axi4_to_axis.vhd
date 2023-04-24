@@ -218,31 +218,36 @@ architecture arch_imp of axi4_to_axis is
        m_data_o  : out std_logic_vector((C_M_AXIS_DATA_WIDTH+(C_M_AXIS_DATA_WIDTH/8)) - 1 downto 0));
   end component;
 
+  type axi_rx_state_t is (AXI_RX_STATE_IDLE, AXI_RX_STATE_SIMPLE, AXI_RX_STATE_MULTI);
+  signal state_axi_rx : axi_rx_state_t;
+
   -- signals
   signal aclk    : std_logic;
   signal aresetn : std_logic;
 
   signal i_s_axis_tvalid : std_logic := '0';
   signal i_s_axis_tdata  : std_logic_vector(C_M_AXIS_DATA_WIDTH-1 downto 0);
-  signal i_axis_data_strb  : std_logic_vector(C_M_AXIS_DATA_WIDTH+(C_M_AXIS_DATA_WIDTH/8)-1 downto 0);
+  signal i_s_axis_data_strb  : std_logic_vector(C_M_AXIS_DATA_WIDTH+(C_M_AXIS_DATA_WIDTH/8)-1 downto 0);
   signal i_s_axis_tstrb  : std_logic_vector((C_M_AXIS_DATA_WIDTH/8)-1 downto 0);
   signal i_s_axis_tlast  : std_logic;
   signal o_s_axis_tready : std_logic;
 
   signal o_m_axis_tvalid : std_logic;
   signal o_m_axis_tdata  : std_logic_vector(C_M_AXIS_DATA_WIDTH-1 downto 0);
-  signal o_axis_data_strb  : std_logic_vector(C_M_AXIS_DATA_WIDTH+(C_M_AXIS_DATA_WIDTH/8)-1 downto 0);
+  signal o_m_axis_data_strb  : std_logic_vector(C_M_AXIS_DATA_WIDTH+(C_M_AXIS_DATA_WIDTH/8)-1 downto 0);
   signal o_m_axis_tstrb  : std_logic_vector((C_M_AXIS_DATA_WIDTH/8)-1 downto 0);
   signal o_m_axis_tlast  : std_logic;
   signal i_m_axis_tready : std_logic := '0';
 
   -- Write Response
-  signal o_s_axi_bresp  : std_logic_vector(1 downto 0);
-  signal o_s_axi_bvalid : std_logic;
-  signal o_s_axi_bid    : std_logic_vector(C_S_AXI_ID_WIDTH-1 downto 0);
-  signal i_s_axi_bready : std_logic;
+  --signal o_axi_bresp  : std_logic_vector(1 downto 0);
+  --signal o_axi_bvalid : std_logic;
+  --signal o_axi_bid    : std_logic_vector(C_S_AXI_ID_WIDTH-1 downto 0);
+  --signal i_axi_bready : std_logic;
 
-  signal temp_bid   : std_logic_vector(C_S_AXI_ID_WIDTH-1 downto 0);
+  signal temp_bid       : std_logic_vector(C_S_AXI_ID_WIDTH-1 downto 0);
+  signal bresp_pending  : std_logic;
+  signal debug_state    : std_logic_vector(1 downto 0);
 
   signal i_axi_awid     : std_logic_vector(C_S_AXI_ID_WIDTH-1 downto 0);
   signal i_axi_awaddr   : std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
@@ -297,12 +302,14 @@ begin
   aresetn <= AXIS_ARESETN;
 
   -- inputs
+  o_axi_wready <= o_s_axis_tready;
+
   i_m_axis_tready <= M_AXIS_TREADY;
   i_s_axis_tvalid <= S_AXI_WVALID;
   i_s_axis_tdata  <= S_AXI_WDATA;
   i_s_axis_tstrb  <= S_AXI_WSTRB;
   i_s_axis_tlast  <= S_AXI_WLAST;
-  i_s_axi_bready  <= S_AXI_BREADY;
+  i_axi_bready  <= S_AXI_BREADY;
 
   i_axi_awid     <= S_AXI_AWID;
   i_axi_awaddr   <= S_AXI_AWADDR;
@@ -324,9 +331,9 @@ begin
   M_AXIS_TDATA  <= o_m_axis_tdata;
   M_AXIS_TSTRB  <= o_m_axis_tstrb;
   M_AXIS_TLAST  <= o_m_axis_tlast;
-  S_AXI_BRESP   <= o_s_axi_bresp;
-  S_AXI_BVALID  <= o_s_axi_bvalid;
-  S_AXI_BID     <= o_s_axi_bid;
+  S_AXI_BRESP   <= o_axi_bresp;
+  S_AXI_BVALID  <= o_axi_bvalid;
+  S_AXI_BID     <= o_axi_bid;
 
   i_axi_wdata   <= S_AXI_WDATA;
   i_axi_wstrb   <= S_AXI_WSTRB;
@@ -336,52 +343,88 @@ begin
   S_AXI_WREADY  <= o_axi_wready;
 
   -- combine strobe and data signals into single "data" channel
-  i_axis_data_strb <= i_s_axis_tdata & i_s_axis_tstrb;
-  o_m_axis_tdata <= o_axis_data_strb( (C_M_AXIS_DATA_WIDTH+(C_M_AXIS_DATA_WIDTH/8)) - 1 downto (C_M_AXIS_DATA_WIDTH/8) );
-  o_m_axis_tstrb <= o_axis_data_strb( (C_M_AXIS_DATA_WIDTH/8) - 1 downto 0 );
+  i_s_axis_data_strb <= i_s_axis_tdata & i_s_axis_tstrb;
+  o_m_axis_tdata <= o_m_axis_data_strb( (C_M_AXIS_DATA_WIDTH+(C_M_AXIS_DATA_WIDTH/8)) - 1 downto (C_M_AXIS_DATA_WIDTH/8) );
+  o_m_axis_tstrb <= o_m_axis_data_strb( (C_M_AXIS_DATA_WIDTH/8) - 1 downto 0 );
 
-  p_accept_aw : process(aclk) 
+  p_axi_rx_flow_state : process(aclk)
   begin
     if rising_edge(aclk) then
       if aresetn = '0' then
-        o_axi_awready <= '1';
+        state_axi_rx <= AXI_RX_STATE_IDLE;
+        o_axi_bvalid <= '0';
+        o_axi_bresp  <= (others => '0');
+        o_axi_bid    <= (others => '0');
+        o_axi_awready <= '1';  -- "always" ready to accept AW (because address gets discarded anyways)
+        bresp_pending <= '0';
+        debug_state <= "00";
       else
-        if i_axi_awvalid = '1' then
-          o_axi_awready <= '0';
-          temp_bid <= i_axi_awid; -- remember for BID in BRESP
-        else 
-          o_axi_awready <= '1';
-        end if;
+        -- state machine that can accept up to 2 requests over AW channel
+        case state_axi_rx is
+          -- IDLE: wait for AW request, remember AWID for BID, go to RX_SIMPLE
+          when AXI_RX_STATE_IDLE =>
+            debug_state <= "01";
+            if i_axi_awvalid = '1' and o_axi_awready = '1' then -- accept incomming AW request
+              state_axi_rx <= AXI_RX_STATE_SIMPLE;
+              o_axi_bid <= i_axi_awid;
+              o_axi_awready <= '0';
+            end if;
+            if i_s_axis_tlast = '1' then
+              -- tlast signals that the transfer can be aknowledged via BRESP channel
+              o_axi_bvalid <= '1';
+            end if;
+            if o_axi_bvalid = '1' and i_axi_bready = '1' then
+              -- deasert, if BRESP is aknowledged
+              o_axi_bvalid <= '0';
+            end if;
+
+          -- RX_SIMPLE: only 1 incomming xfer, AXI Slave can still accept AW requests
+          -- when another AW reqest is incomming go to RX_MULTI
+          when AXI_RX_STATE_SIMPLE =>
+            debug_state <= "10";
+            if i_axi_awvalid = '1' and o_axi_awready = '1' then -- accept ANOTHER incomming AW request
+              state_axi_rx <= AXI_RX_STATE_MULTI;
+              -- signal the pending signal, if awvalid, awready and tlast assert at the same time
+              bresp_pending <= o_m_axis_tlast; 
+              temp_bid <= i_axi_awid;
+              o_axi_bvalid <= '0';
+              o_axi_awready <= '0';
+            elsif o_m_axis_tlast = '1' then
+              -- tlast signals that the transfer is complete and can be aknowledged via BRESP channel
+              state_axi_rx <= AXI_RX_STATE_IDLE;
+              o_axi_bvalid <= '1';
+              o_axi_awready <= '1';
+            else
+              -- wait for transfer to be complete
+              state_axi_rx <= AXI_RX_STATE_SIMPLE;
+              o_axi_bvalid <= '0';
+              o_axi_awready <= '1';
+            end if;
+            if o_axi_bvalid = '1' and i_axi_bready = '1' then
+              -- deasert, if BRESP is aknowledged
+              o_axi_bvalid <= '0';
+            end if;
+
+          -- RX_MULTI: multiple xfers pending, AXI Slave AW is stalled
+          when AXI_RX_STATE_MULTI =>
+            debug_state <= "11";
+            if bresp_pending = '1' then
+              bresp_pending <= '0';
+              state_axi_rx <= AXI_RX_STATE_SIMPLE;
+              o_axi_awready <= '1';
+              o_axi_bvalid <= '1';
+            elsif o_m_axis_tlast = '1' then
+              state_axi_rx <= AXI_RX_STATE_SIMPLE;
+              o_axi_awready <= '1';
+              o_axi_bid <= temp_bid;
+              o_axi_bvalid <= '1';
+            else
+              o_axi_awready <= '0';
+            end if;
+       end case;
       end if;
     end if;
   end process;
-
-  p_bresp : process(aclk)
-  begin
-    if rising_edge(aclk) then
-      if aresetn = '0' then
-        o_s_axi_bvalid <= '0';
-        o_s_axi_bresp  <= (others => '0');
-        o_s_axi_bid    <= (others => '0');
-      else
-        if o_s_axi_bvalid = '1' then -- waiting for ack from master
-          if i_s_axi_bready = '1' then -- master did ack
-            o_s_axi_bvalid <= '0'; -- BRESP complete
-            o_s_axi_bresp  <= (others => '0');
-            o_s_axi_bid    <= (others => '0');
-          end if;
-        else -- wait to generate a BRESP
-          -- TODO this if statement is won't work for non-burst transfers wher tlast is not used
-          if o_m_axis_tlast = '1' and i_m_axis_tready = '1' then
-            o_s_axi_bvalid <= '1';
-            o_s_axi_bresp  <= "00"; -- TODO is this 0b00 => "OKAY"?
-            o_s_axi_bid    <= temp_bid;  -- TODO write temp_bid in AW accept process
-          end if;
-        end if;
-      end if;
-    end if;
-  end process;
-
 
   skidbuffer_inst : skidbuffer
   generic map (
@@ -395,12 +438,12 @@ begin
     s_valid_i => i_s_axis_tvalid,
     s_last_i  => i_s_axis_tlast,
     s_ready_o => o_s_axis_tready,
-    s_data_i  => i_axis_data_strb,
+    s_data_i  => i_s_axis_data_strb,
 
     m_valid_o => o_m_axis_tvalid,
     m_last_o  => o_m_axis_tlast,
     m_ready_i => i_m_axis_tready,
-    m_data_o  => o_axis_data_strb
+    m_data_o  => o_m_axis_data_strb
   );
 
 end arch_imp;

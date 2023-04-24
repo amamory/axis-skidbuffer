@@ -135,9 +135,10 @@ architecture bh of tb_axis is
   
   constant CLK_PERIOD: TIME := 5 ns;
 
-  signal sim_start_write : std_logic := '0';
+  signal sim_start_write : std_logic := '0'; -- request AW channel
+  signal sim_start_ready : std_logic := '0'; -- signal ready to receive from slave
+  signal sim_valid_data  : std_logic := '0'; -- AW complete, now send W channel
   signal sim_data        : std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-  signal sim_valid_data  : std_logic := '0';
 
   signal o_axis_tvalid : std_logic;
   signal o_axis_tdata  : std_logic_vector(C_M_AXIS_DATA_WIDTH-1 downto 0);
@@ -196,6 +197,7 @@ architecture bh of tb_axis is
   signal o_axi_rready   : std_logic;
 
   signal clk_count : std_logic_vector(7 downto 0) := (others => '0');
+  signal outstanding_xfers : std_logic_vector(7 downto 0) := (others => '0');
 begin
 
   -- generate clk signal
@@ -217,8 +219,6 @@ begin
     rst_n <= '1';
     wait;
   end process;
-
-  i_axis_tready <= '1'; -- TODO REMOVE
 
   -- generate AW request
   p_aw_stimuli : process(clk)
@@ -257,7 +257,14 @@ begin
             o_axi_awsize <= "110"; -- 64 bytes
             o_axi_awburst <= "01"; -- INCR
             o_axi_awvalid <= '1';
-            sim_valid_data <= '0';
+            --sim_valid_data <= '0';
+          end if;
+        end if;
+        if sim_valid_data = '1' then
+          if o_axi_wlast = '1' and i_axi_wready = '1' then
+            if unsigned(outstanding_xfers) = 1 then 
+              sim_valid_data <= '0';
+            end if;
           end if;
         end if;
       end if;
@@ -273,41 +280,58 @@ begin
         o_axi_wstrb <= (others => '0');
         sim_data    <= (others => '0');
         o_axi_wlast <= '0';
+        o_axi_wvalid <= '0';
       else
-        if sim_valid_data = '1' then    -- OK from a valid AW handshake
-          if i_axi_wready = '1' then    -- wready from slave
-            if unsigned(o_axi_wdata) = 63 then
-              o_axi_wlast <= '1';
-            else 
-              o_axi_wlast <= '0';
-            end if;
+        if (sim_valid_data = '1' or o_axi_awvalid='1') then -- and o_axi_wlast = '0'  then    -- OK from a valid AW handshake
+        --  if o_axi_wlast = '0' then
+            if i_axi_wready = '1' then    -- wready from slave
+              if unsigned(o_axi_wdata) = 15 then
+                o_axi_wlast <= '1';
+              else 
+                o_axi_wlast <= '0';
+              end if;
 
-            if unsigned(o_axi_wdata) = 64 then
-              -- restart counter at "1"
-              o_axi_wdata(C_S_AXI_DATA_WIDTH-1 downto 1) <= (others => '0');
-              o_axi_wdata(0) <= '1';
-              sim_data(C_S_AXI_DATA_WIDTH-1 downto 1) <= (others => '0');
-              sim_data(0) <= '1';
+              if unsigned(outstanding_xfers) /= 0 and o_axi_wlast = '0' then
+                if unsigned(o_axi_wdata) = 16 then
+                  -- restart counter at "1"
+                  o_axi_wdata(C_S_AXI_DATA_WIDTH-1 downto 1) <= (others => '0');
+                  o_axi_wdata(0) <= '1';
+                  sim_data(C_S_AXI_DATA_WIDTH-1 downto 1) <= (others => '0');
+                  sim_data(0) <= '1';
+                else
+                  if (unsigned(sim_data) > unsigned(o_axi_wdata)) and (unsigned(sim_data) < 4) then
+                    o_axi_wdata <= std_logic_vector(unsigned(sim_data) + 1);
+                  else
+                    o_axi_wdata <= std_logic_vector(unsigned(o_axi_wdata) + 1);
+                  end if;
+                  
+                  if unsigned(sim_data) = 16 then
+                    sim_data(C_S_AXI_DATA_WIDTH-1 downto 1) <= (others => '0');
+                    sim_data(0) <= '1';
+                  else
+                    sim_data <= std_logic_vector(unsigned(sim_data) + 1);
+                  end if;
+                end if;
+                o_axi_wvalid <= '1';
+                o_axi_wstrb  <= "1";
+              else
+                if unsigned(outstanding_xfers) = 1 then
+                  o_axi_wdata <= (others => '0');
+                  sim_data <= (others => '0');
+                  o_axi_wvalid <= '0';
+                  o_axi_wstrb  <= "0";
+                else 
+                  o_axi_wdata(C_S_AXI_DATA_WIDTH-1 downto 1) <= (others => '0');
+                  o_axi_wdata(0) <= '1';
+                  sim_data(C_S_AXI_DATA_WIDTH-1 downto 1) <= (others => '0');
+                  sim_data(0) <= '1';
+                end if;
+              end if;
             else
-              if (unsigned(sim_data) > unsigned(o_axi_wdata)) and (unsigned(sim_data) < 4) then
-                o_axi_wdata <= std_logic_vector(unsigned(sim_data) + 1);
-              else
-                o_axi_wdata <= std_logic_vector(unsigned(o_axi_wdata) + 1);
-              end if;
-              
-              if unsigned(sim_data) = 64 then
-                sim_data(C_S_AXI_DATA_WIDTH-1 downto 1) <= (others => '0');
-                sim_data(0) <= '1';
-              else
-                sim_data <= std_logic_vector(unsigned(sim_data) + 1);
-              end if;
+              o_axi_wdata <= o_axi_wdata;
+              sim_data    <= sim_data;
             end if;
-          else
-            o_axi_wdata <= o_axi_wdata;
-            sim_data    <= sim_data;
-          end if;
-          o_axi_wvalid <= '1';
-          o_axi_wstrb  <= "1";
+        --  end if;
         else 
           o_axi_wvalid <= '0';
           o_axi_wstrb  <= "0";
@@ -319,19 +343,113 @@ begin
     end if;
   end process;
 
+  -- accept and ack BRESP
+  p_ack_bresp : process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst_n = '0' then
+          o_axi_bready <= '1';
+      else
+        if i_axi_bvalid = '1' then
+          o_axi_bready <= '0';
+        else
+          o_axi_bready <= '1';
+        end if;
+      end if;
+    end if;
+  end process;
+
   -- generate ready signal
-  p_stimuli_tready : process(clk)
+  p_slave_tready : process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst_n = '0' then
+          i_axis_tready <= '0';
+      else
+        if sim_start_ready = '1' then
+          i_axis_tready <= '1';
+        else
+          i_axis_tready <= '0';
+        end if;
+      end if;
+    end if;
+  end process;
+
+  -- generate valid signal
+  p_stimuli_valid : process(clk)
   begin
     if rising_edge(clk) then
       if rst_n = '0' then
           sim_start_write <= '0';
       else
-        if unsigned(clk_count) = 3 then
-          sim_start_write <= '1';
+        if o_axi_wlast = '1' and i_axi_wready = '1' then
+          outstanding_xfers <= std_logic_vector(unsigned(outstanding_xfers) - 1);
+        else
+          if unsigned(clk_count) = 3 then
+            sim_start_write <= '1';
+            outstanding_xfers <= std_logic_vector(unsigned(outstanding_xfers) + 1);
+          end if;
+          if unsigned(clk_count) = 5 then
+            sim_start_write <= '0';
+          end if;
+
+          if unsigned(clk_count) = 20 then
+            sim_start_write <= '1';
+            outstanding_xfers <= std_logic_vector(unsigned(outstanding_xfers) + 1);
+          end if;
+          if unsigned(clk_count) = 22 then
+            sim_start_write <= '0';
+          end if;
+
+          if unsigned(clk_count) = 46 then
+            sim_start_write <= '1';
+            outstanding_xfers <= std_logic_vector(unsigned(outstanding_xfers) + 1);
+          end if;
+          if unsigned(clk_count) = 48 then
+            sim_start_write <= '0';
+          end if;
+          if unsigned(clk_count) = 56 then
+            sim_start_write <= '1';
+            outstanding_xfers <= std_logic_vector(unsigned(outstanding_xfers) + 1);
+          end if;
+          if unsigned(clk_count) = 58 then
+            sim_start_write <= '0';
+          end if;
+
+--          if unsigned(clk_count) = 78 then
+--            sim_start_write <= '1';
+--            outstanding_xfers <= std_logic_vector(unsigned(outstanding_xfers) + 1);
+--          end if;
+--          if unsigned(clk_count) = 85 then
+--            sim_start_write <= '0';
+--          end if;
         end if;
-        if unsigned(clk_count) = 4 then
-          sim_start_write <= '0';
+      end if;
+    end if;
+  end process;
+
+  -- generate ready signal
+  p_stimuli_ready : process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst_n = '0' then
+          sim_start_ready <= '0';
+      else
+        if unsigned(clk_count) = 2 then
+          sim_start_ready <= '1';
         end if;
+        if unsigned(clk_count) = 52 then
+          sim_start_ready <= '0';
+        end if;
+        if unsigned(clk_count) = 70 then
+          sim_start_ready <= '1';
+        end if;
+--        if unsigned(clk_count) = 27 then
+--          sim_start_ready <= '0';
+--        end if;
+--        if unsigned(clk_count) = 38 then
+--          sim_start_ready <= '1';
+--        end if;
       end if;
     end if;
   end process;

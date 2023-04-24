@@ -40,6 +40,19 @@ Run in powershell:
 .\compile.bat
 ```
 
+## AXI4 Full to AXI-Stream converter
+
+Convert AXI4 write bursts to AXI-Slave protocol.
+
+- accepts AXI4 AW-channel handshake
+- acknowledges successful transfer via `bresp` on B-channel after `axis_tlast`
+- transfer AXI4 W-channel to AXI-S using skidbuffer
+- supports `axis_tready` backpressure to `axi_awready` and `axi_wready`
+- supports full throughput bandwidth with back-to-back burst transfer without wait cycles
+
+![img/gtkwave_axi-to-axis.png](img/gtkwave_axi-to-axis.png)
+
+
 # Acknowledgements
 
 https://zipcpu.com/blog/2019/05/22/skidbuffer.html
