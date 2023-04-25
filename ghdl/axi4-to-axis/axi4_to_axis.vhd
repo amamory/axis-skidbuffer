@@ -42,10 +42,8 @@ entity axi4_to_axis is
     -- Width of optional user defined signal in read data channel
     C_S_AXI_RUSER_WIDTH : integer   := 0;
     -- Width of optional user defined signal in write response channel
-    C_S_AXI_BUSER_WIDTH : integer   := 0;
-
-    -- Width of S_AXIS address bus. The slave accepts the read and write addresses of width C_M_AXIS_DATA_WIDTH.
-    C_M_AXIS_DATA_WIDTH  : integer := 32
+    C_S_AXI_BUSER_WIDTH : integer   := 0
+    
   );
   port (
     -- Users to add ports here
@@ -187,9 +185,9 @@ entity axi4_to_axis is
     -- Master Stream Ports. TVALID indicates that the master is driving a valid transfer, A transfer takes place when both TVALID and TREADY are asserted. 
     M_AXIS_TVALID : out std_logic;
     -- TDATA is the primary payload that is used to provide the data that is passing across the interface from the master.
-    M_AXIS_TDATA  : out std_logic_vector(C_M_AXIS_DATA_WIDTH-1 downto 0);
+    M_AXIS_TDATA  : out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
     -- TSTRB is the byte qualifier that indicates whether the content of the associated byte of TDATA is processed as a data byte or a position byte.
-    M_AXIS_TSTRB  : out std_logic_vector((C_M_AXIS_DATA_WIDTH/8)-1 downto 0);
+    M_AXIS_TSTRB  : out std_logic_vector((C_S_AXI_DATA_WIDTH/8)-1 downto 0);
     -- TLAST indicates the boundary of a packet.
     M_AXIS_TLAST  : out std_logic;
     -- TREADY indicates that the slave can accept a transfer in the current cycle.
@@ -210,12 +208,12 @@ architecture arch_imp of axi4_to_axis is
        s_valid_i : in  std_logic;
        s_last_i  : in  std_logic;
        s_ready_o : out std_logic;
-       s_data_i  : in  std_logic_vector((C_M_AXIS_DATA_WIDTH+(C_M_AXIS_DATA_WIDTH/8)) - 1 downto 0);
+       s_data_i  : in  std_logic_vector((C_S_AXI_DATA_WIDTH+(C_S_AXI_DATA_WIDTH/8)) - 1 downto 0);
 
        m_valid_o : out std_logic;
        m_last_o  : out std_logic;
        m_ready_i : in  std_logic;
-       m_data_o  : out std_logic_vector((C_M_AXIS_DATA_WIDTH+(C_M_AXIS_DATA_WIDTH/8)) - 1 downto 0));
+       m_data_o  : out std_logic_vector((C_S_AXI_DATA_WIDTH+(C_S_AXI_DATA_WIDTH/8)) - 1 downto 0));
   end component;
 
   type axi_rx_state_t is (AXI_RX_STATE_IDLE, AXI_RX_STATE_SIMPLE, AXI_RX_STATE_MULTI);
@@ -226,16 +224,16 @@ architecture arch_imp of axi4_to_axis is
   signal aresetn : std_logic;
 
   signal i_s_axis_tvalid : std_logic := '0';
-  signal i_s_axis_tdata  : std_logic_vector(C_M_AXIS_DATA_WIDTH-1 downto 0);
-  signal i_s_axis_data_strb  : std_logic_vector(C_M_AXIS_DATA_WIDTH+(C_M_AXIS_DATA_WIDTH/8)-1 downto 0);
-  signal i_s_axis_tstrb  : std_logic_vector((C_M_AXIS_DATA_WIDTH/8)-1 downto 0);
+  signal i_s_axis_tdata  : std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+  signal i_s_axis_data_strb  : std_logic_vector(C_S_AXI_DATA_WIDTH+(C_S_AXI_DATA_WIDTH/8)-1 downto 0);
+  signal i_s_axis_tstrb  : std_logic_vector((C_S_AXI_DATA_WIDTH/8)-1 downto 0);
   signal i_s_axis_tlast  : std_logic;
   signal o_s_axis_tready : std_logic;
 
   signal o_m_axis_tvalid : std_logic;
-  signal o_m_axis_tdata  : std_logic_vector(C_M_AXIS_DATA_WIDTH-1 downto 0);
-  signal o_m_axis_data_strb  : std_logic_vector(C_M_AXIS_DATA_WIDTH+(C_M_AXIS_DATA_WIDTH/8)-1 downto 0);
-  signal o_m_axis_tstrb  : std_logic_vector((C_M_AXIS_DATA_WIDTH/8)-1 downto 0);
+  signal o_m_axis_tdata  : std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+  signal o_m_axis_data_strb  : std_logic_vector(C_S_AXI_DATA_WIDTH+(C_S_AXI_DATA_WIDTH/8)-1 downto 0);
+  signal o_m_axis_tstrb  : std_logic_vector((C_S_AXI_DATA_WIDTH/8)-1 downto 0);
   signal o_m_axis_tlast  : std_logic;
   signal i_m_axis_tready : std_logic := '0';
 
@@ -344,8 +342,8 @@ begin
 
   -- combine strobe and data signals into single "data" channel
   i_s_axis_data_strb <= i_s_axis_tdata & i_s_axis_tstrb;
-  o_m_axis_tdata <= o_m_axis_data_strb( (C_M_AXIS_DATA_WIDTH+(C_M_AXIS_DATA_WIDTH/8)) - 1 downto (C_M_AXIS_DATA_WIDTH/8) );
-  o_m_axis_tstrb <= o_m_axis_data_strb( (C_M_AXIS_DATA_WIDTH/8) - 1 downto 0 );
+  o_m_axis_tdata <= o_m_axis_data_strb( (C_S_AXI_DATA_WIDTH+(C_S_AXI_DATA_WIDTH/8)) - 1 downto (C_S_AXI_DATA_WIDTH/8) );
+  o_m_axis_tstrb <= o_m_axis_data_strb( (C_S_AXI_DATA_WIDTH/8) - 1 downto 0 );
 
   p_axi_rx_flow_state : process(aclk)
   begin
@@ -428,7 +426,7 @@ begin
 
   skidbuffer_inst : skidbuffer
   generic map (
-      DATA_WIDTH    => (C_M_AXIS_DATA_WIDTH+(C_M_AXIS_DATA_WIDTH/8)),
+      DATA_WIDTH    => (C_S_AXI_DATA_WIDTH+(C_S_AXI_DATA_WIDTH/8)),
       OPT_DATA_REG  => True
   )
   port map (

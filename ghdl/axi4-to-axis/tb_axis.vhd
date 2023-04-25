@@ -55,10 +55,7 @@ entity tb_axis is
     -- Width of optional user defined signal in read data channel
     C_S_AXI_RUSER_WIDTH  : integer   := 0;
     -- Width of optional user defined signal in write response channel
-    C_S_AXI_BUSER_WIDTH  : integer   := 0;
-
-    -- Width of S_AXIS address bus. The slave accepts the read and write addresses of width C_M_AXIS_DATA_WIDTH.
-    C_M_AXIS_DATA_WIDTH  : integer   := 8
+    C_S_AXI_BUSER_WIDTH  : integer   := 0
   );
 end tb_axis;
 
@@ -73,8 +70,7 @@ architecture bh of tb_axis is
       C_S_AXI_ARUSER_WIDTH : integer;
       C_S_AXI_WUSER_WIDTH  : integer;
       C_S_AXI_RUSER_WIDTH  : integer;
-      C_S_AXI_BUSER_WIDTH  : integer;
-      C_M_AXIS_DATA_WIDTH  : integer
+      C_S_AXI_BUSER_WIDTH  : integer
     );
     port (
       AXIS_ACLK      : in  std_logic;
@@ -126,8 +122,8 @@ architecture bh of tb_axis is
       S_AXI_RREADY   : in  std_logic;
 
       M_AXIS_TVALID : out std_logic;
-      M_AXIS_TDATA  : out std_logic_vector(C_M_AXIS_DATA_WIDTH-1 downto 0);
-      M_AXIS_TSTRB  : out std_logic_vector((C_M_AXIS_DATA_WIDTH/8)-1 downto 0);
+      M_AXIS_TDATA  : out std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+      M_AXIS_TSTRB  : out std_logic_vector((C_S_AXI_ADDR_WIDTH/8)-1 downto 0);
       M_AXIS_TLAST  : out std_logic;
       M_AXIS_TREADY : in  std_logic
     );
@@ -141,8 +137,8 @@ architecture bh of tb_axis is
   signal sim_data        : std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
 
   signal o_axis_tvalid : std_logic;
-  signal o_axis_tdata  : std_logic_vector(C_M_AXIS_DATA_WIDTH-1 downto 0);
-  signal o_axis_tstrb  : std_logic_vector((C_M_AXIS_DATA_WIDTH/8)-1 downto 0);
+  signal o_axis_tdata  : std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+  signal o_axis_tstrb  : std_logic_vector((C_S_AXI_ADDR_WIDTH/8)-1 downto 0);
   signal o_axis_tlast  : std_logic;
   signal i_axis_tready : std_logic := '0';
 
@@ -464,8 +460,7 @@ begin
       C_S_AXI_ARUSER_WIDTH => C_S_AXI_ARUSER_WIDTH,
       C_S_AXI_WUSER_WIDTH  => C_S_AXI_WUSER_WIDTH,
       C_S_AXI_RUSER_WIDTH  => C_S_AXI_RUSER_WIDTH,
-      C_S_AXI_BUSER_WIDTH  => C_S_AXI_BUSER_WIDTH,
-      C_M_AXIS_DATA_WIDTH  => C_M_AXIS_DATA_WIDTH
+      C_S_AXI_BUSER_WIDTH  => C_S_AXI_BUSER_WIDTH
     )
     port map (
       AXIS_ACLK      => clk,
