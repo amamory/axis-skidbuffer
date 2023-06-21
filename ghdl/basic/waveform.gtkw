@@ -1,0 +1,45 @@
+[*]
+[*] GTKWave Analyzer v3.3.100 (w)1999-2019 BSI
+[*] Fri Apr 21 06:49:43 2023
+[*]
+[dumpfile] "C:\Users\simon\Downloads\P9\ghdl-axi-sim\axis-skidbuffer\ghdl\wave.vcd"
+[dumpfile_mtime] "Fri Apr 21 06:48:36 2023"
+[dumpfile_size] 14803
+[savefile] "C:\Users\simon\Downloads\P9\ghdl-axi-sim\axis-skidbuffer\ghdl\waveform.gtkw"
+[timestart] 0
+[size] 1920 1057
+[pos] -1 -1
+*-25.000000 163500000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] tb_skid.
+[sst_width] 197
+[signals_width] 317
+[sst_expanded] 1
+[sst_vpaned_height] 361
+@24
+[color] 5
+tb_skid.clk_count[7:0]
+@28
+[color] 3
+tb_skid.clk
+[color] 3
+tb_skid.rst_n
+tb_skid.s_axis_tvalid
+@22
+tb_skid.s_axis_tdata[7:0]
+@29
+tb_skid.m_axis_tlast
+@28
+tb_skid.s_axis_tready
+[color] 2
+tb_skid.m_axis_tvalid
+@22
+[color] 2
+tb_skid.m_axis_tdata[7:0]
+@29
+[color] 2
+tb_skid.s_axis_tlast
+@28
+[color] 2
+tb_skid.m_axis_tready
+[pattern_trace] 1
+[pattern_trace] 0
